@@ -132,6 +132,13 @@ def parse_arguments():
         help='输出格式 (默认: json, 可选: srt)'
     )
 
+    parser.add_argument(
+        '--speech_speed',
+        type=float,
+        default=1.0,
+        help='语音速度 (默认: 1.0, 大于1.0为加速, 小于1.0为减速)'
+    )
+
     # 测试句子分割
     parser.add_argument(
         '--test_sentence_split',
@@ -387,7 +394,7 @@ def split_by_comma_with_punctuation(text, max_length=50):
 
 def process_text_with_timestamps(cosyvoice, text, prompt_text,
                                  prompt_speech_16k, stream=False,
-                                 max_sentence_length=50):
+                                 max_sentence_length=50, speed=1.0):
     """
     处理文本并生成带时间戳的音频
 
@@ -398,6 +405,7 @@ def process_text_with_timestamps(cosyvoice, text, prompt_text,
         prompt_speech_16k: 提示音频
         stream: 是否使用流式生成
         max_sentence_length: 最大句子长度，用于文本分割
+        speed: 语音速度 (默认: 1.0)
 
     Returns:
         full_audio: 完整音频张量
@@ -425,6 +433,7 @@ def process_text_with_timestamps(cosyvoice, text, prompt_text,
                 prompt_text,  # prompt_text: 提示文本（可为空）
                 prompt_speech_16k,  # prompt_speech_16k: 提示音频
                 stream=stream,
+                speed=speed,  # speed: 语音速度
                 text_frontend=True
             )
 
@@ -616,6 +625,7 @@ def main():
         print(f"生成次数: {args.iterations}")
         print(f"随机种子: {args.seed}")
         print(f"流式生成: {args.stream}")
+        print(f"语音速度: {args.speech_speed}")
         print(f"JIT加载: {args.load_jit}")
         print(f"TensorRT加载: {args.load_trt}")
         print(f"FP16精度: {args.fp16}")
@@ -662,7 +672,8 @@ def main():
                 args.prompt_text,
                 prompt_speech_16k,
                 args.stream,
-                args.max_sentence_length
+                args.max_sentence_length,
+                args.speech_speed
             )
 
             # 保存音频文件
