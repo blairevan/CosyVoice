@@ -91,7 +91,12 @@ def split_paragraph(text: str, tokenize, lang="zh", token_max_n=80, token_min_n=
     st = 0
     utts = []
     for i, c in enumerate(text):
-        if c in pounc:
+        # 小数点（数字之间的 .）不作为句末标点，如 1.4mg/d
+        is_decimal_point = (
+            c == '.' and i > 0 and i + 1 < len(text) and
+            text[i - 1].isdigit() and text[i + 1].isdigit()
+        )
+        if c in pounc and not is_decimal_point:
             if len(text[st: i]) > 0:
                 utts.append(text[st: i] + c)
             if i + 1 < len(text) and text[i + 1] in ['"', '”']:

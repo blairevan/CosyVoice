@@ -134,7 +134,8 @@ class CosyVoiceFrontEnd:
                 text = text.replace("\n", "")
                 text = replace_blank(text)
                 text = replace_corner_mark(text)
-                text = text.replace(".", "。")
+                # 仅将非小数点替换为中文句号，避免 1.4mg 中的 . 被当成句号
+                text = re.sub(r'(?<!\d)\.(?!\d)', '。', text)
                 text = text.replace(" - ", "，")
                 text = remove_bracket(text)
                 text = re.sub(r'[，,、]+$', '。', text)

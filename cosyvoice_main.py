@@ -256,8 +256,13 @@ def custom_text_split(text, max_length=50):
         char = text[i]
         current_sentence += char
 
-        # 如果遇到句子级标点符号
-        if char in sentence_punctuation:
+        # 如果遇到句子级标点符号（小数点不作为句号，如 1.4mg/d）
+        is_decimal_point = (
+            char == '.' and
+            i > 0 and i + 1 < len(text) and
+            text[i - 1].isdigit() and text[i + 1].isdigit()
+        )
+        if char in sentence_punctuation and not is_decimal_point:
             # 保存当前句子
             sentence_to_save = current_sentence.strip()
             if sentence_to_save and not is_only_punctuation(sentence_to_save):
