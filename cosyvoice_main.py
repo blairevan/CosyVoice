@@ -27,11 +27,11 @@ def parse_arguments():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 示例用法:
-  python cosyvoice_main.py --audio ./asset/zero_shot_prompt.wav 
+  python cosyvoice_main.py --audio ./asset/zero_shot_prompt.wav
     --text "你好，这是一个语音克隆测试"
-  python cosyvoice_main.py --audio ./samples/voice_sample.wav 
+  python cosyvoice_main.py --audio ./samples/voice_sample.wav
     --text "今天天气真不错" --output ./output/cloned_speech.wav
-  python cosyvoice_main.py --audio ./samples/voice_sample.wav 
+  python cosyvoice_main.py --audio ./samples/voice_sample.wav
     --text "今天天气真不错" --format srt --output ./output/cloned_speech.wav
         """
     )
@@ -313,38 +313,115 @@ def smart_split_long_sentence(text, max_length):
     if len(text) <= max_length:
         return [text]
 
-    sentences = []
-    current_sentence = ""
+    def is_splittable_punctuation(char, index, full_text):
+        numeric_punctuations = {'.', '．', ',', '，'}
+        if char in numeric_punctuations:
+            if (index > 0 and index + 1 < len(full_text) and
+                    full_text[index - 1].isdigit() and full_text[index + 1].isdigit()):
+                return False
+        return True
 
-    # 按空格分割单词
-    words = text.split()
+    def split_by_punctuation_preserve(text_to_split):
+        punctuation_chars = set([
+            '，', ',', '、', ';', '；', ':', '：',
+            '（', '）', '(', ')',
+            '【', '】', '[', ']',
+            '《', '》', '<', '>',
+            '—', '-', '…'
+        ])
+        parts = []
+        current = ""
+        i = 0
+        while i < len(text_to_split):
+            char = text_to_split[i]
+            current += char
+            if char in punctuation_chars and is_splittable_punctuation(char, i, text_to_split):
+                part = current.strip()
+                if part and not is_only_punctuation(part):
+                    parts.append(part)
+                current = ""
+            i += 1
+        if current.strip():
+            part = current.strip()
+            if part and not is_only_punctuation(part):
+                parts.append(part)
+        return parts
 
-    for word in words:
-        # 检查添加当前单词后是否超过长度限制
-        if len(current_sentence + " " + word) <= max_length:
-            if current_sentence:
-                current_sentence += " " + word
-            else:
-                current_sentence = word
-        else:
-            # 当前句子已满，保存并开始新句子
+    def split_by_spaces_or_hard(text_to_split):
+        if len(text_to_split) <= max_length:
+            cleaned = text_to_split.strip()
+            if cleaned and not is_only_punctuation(cleaned):
+                return [cleaned]
+            return []
+
+        if ' ' not in text_to_split:
+            segments = []
+            for j in range(0, len(text_to_split), max_length):
+                segment = text_to_split[j:j + max_length].strip()
+                if segment and not is_only_punctuation(segment):
+                    segments.append(segment)
+            return segments
+
+        sentences = []
+        current_sentence = ""
+        words = text_to_split.split()
+        for word in words:
+            candidate = f"{current_sentence} {word}".strip() if current_sentence else word
+            if len(candidate) <= max_length:
+                current_sentence = candidate
+                continue
+
             if current_sentence:
                 sentences.append(current_sentence)
                 current_sentence = word
-            else:
-                # 如果单个单词就超过长度限制，强制分割
-                if len(word) > max_length:
-                    # 按字符分割，但尽量在合适的位置分割
-                    for i in range(0, len(word), max_length):
-                        sentences.append(word[i:i + max_length])
-                else:
-                    current_sentence = word
+                continue
 
-    # 添加最后一个句子
+            if len(word) > max_length:
+                for j in range(0, len(word), max_length):
+                    segment = word[j:j + max_length].strip()
+                    if segment and not is_only_punctuation(segment):
+                        sentences.append(segment)
+                current_sentence = ""
+                continue
+
+            current_sentence = word
+
+        if current_sentence:
+            sentences.append(current_sentence)
+        return sentences
+
+    punctuation_parts = split_by_punctuation_preserve(text)
+    if not punctuation_parts:
+        return split_by_spaces_or_hard(text)
+
+    merged = []
+    current_sentence = ""
+    for part in punctuation_parts:
+        candidate = f"{current_sentence}{part}" if current_sentence else part
+        if len(candidate) <= max_length:
+            current_sentence = candidate
+            continue
+
+        if current_sentence:
+            merged.append(current_sentence)
+            current_sentence = ""
+
+        if len(part) <= max_length:
+            current_sentence = part
+            continue
+
+        merged.extend(split_by_spaces_or_hard(part))
+
     if current_sentence:
-        sentences.append(current_sentence)
+        merged.append(current_sentence)
 
-    return sentences
+    final_sentences = []
+    for sentence in merged:
+        cleaned = sentence.strip()
+        if cleaned and not is_only_punctuation(cleaned):
+            final_sentences.append(cleaned)
+
+    return final_sentences
 
 
 def split_by_comma_with_punctuation(text, max_length=50):
