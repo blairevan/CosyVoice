@@ -316,14 +316,19 @@ def smart_split_long_sentence(text, max_length):
     def is_splittable_punctuation(char, index, full_text):
         numeric_punctuations = {'.', '．', ',', '，'}
         if char in numeric_punctuations:
-            if (index > 0 and index + 1 < len(full_text) and
-                    full_text[index - 1].isdigit() and full_text[index + 1].isdigit()):
+            if (
+                index > 0
+                and index + 1 < len(full_text)
+                and full_text[index - 1].isdigit()
+                and full_text[index + 1].isdigit()
+            ):
                 return False
         return True
 
     def split_by_punctuation_preserve(text_to_split):
+        # 顿号 、 不作长句切分点，保留在子句内
         punctuation_chars = set([
-            '，', ',', '、', ';', '；', ':', '：',
+            '，', ',', ';', '；', ':', '：',
             '（', '）', '(', ')',
             '【', '】', '[', ']',
             '《', '》', '<', '>',
@@ -335,7 +340,9 @@ def smart_split_long_sentence(text, max_length):
         while i < len(text_to_split):
             char = text_to_split[i]
             current += char
-            if char in punctuation_chars and is_splittable_punctuation(char, i, text_to_split):
+            if char in punctuation_chars and is_splittable_punctuation(
+                char, i, text_to_split
+            ):
                 part = current.strip()
                 if part and not is_only_punctuation(part):
                     parts.append(part)
@@ -366,7 +373,8 @@ def smart_split_long_sentence(text, max_length):
         current_sentence = ""
         words = text_to_split.split()
         for word in words:
-            candidate = f"{current_sentence} {word}".strip() if current_sentence else word
+            candidate = f"{current_sentence} {word}".strip(
+            ) if current_sentence else word
             if len(candidate) <= max_length:
                 current_sentence = candidate
                 continue

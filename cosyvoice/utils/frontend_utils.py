@@ -76,12 +76,14 @@ def split_paragraph(text: str, tokenize, lang="zh", token_max_n=80, token_min_n=
             return len(tokenize(_text)) < merge_len
 
     if lang == "zh":
-        pounc = ['。', '？', '！', '；', '：', '、', '.', '?', '!', ';']
+        # 顿号 、 不作为句末切分标记，保留在句内原样
+        pounc = ['。', '？', '！', '；', '：', '.', '?', '!', ';']
     else:
         pounc = ['.', '?', '!', ';', ':']
     if comma_split:
         pounc.extend(['，', ','])
 
+    # 中文若以 、 结尾，仍补 。 以便切分逻辑能产出 utterance，句内 、 保留
     if text[-1] not in pounc:
         if lang == "zh":
             text += "。"
